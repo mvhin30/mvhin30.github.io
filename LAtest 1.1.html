@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Muwon — Video Editor & Content Creator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#F2EBDC;
+    --panel:#E8DFC9;
+    --card:#FBF7EE;
+    --line:#D9CCAA;
+    --coral:#D9483A;
+    --yellow:#B9860F;
+    --teal:#12786C;
+    --text:#18150E;
+    --muted:#6E6656;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--ink);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    overflow-x:hidden;
+  }
+  .mono{font-family:'JetBrains Mono', monospace;}
+  .display{font-family:'Unbounded', sans-serif;}
+
+  ::selection{background:var(--coral); color:#FBF7EE;}
+
+  /* ===== TIMELINE NAV ===== */
+  #timeline-nav{
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    background:rgba(242,235,220,0.92);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .tl-top{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 24px; border-bottom:1px solid var(--line);
+  }
+  .tl-brand{font-family:'Unbounded'; font-weight:800; font-size:15px; letter-spacing:0.5px;}
+  .tl-brand span{color:var(--coral);}
+  .tl-code{font-size:12px; color:var(--muted); letter-spacing:1px;}
+  .tl-track{
+    position:relative; height:34px; display:flex; align-items:center;
+    padding:0 24px; gap:2px;
+  }
+  .tl-ruler{
+    position:absolute; left:0; right:0; top:50%; height:1px; background:var(--line);
+  }
+  .tl-clip{
+    position:relative; z-index:2; font-size:11px; font-weight:600; letter-spacing:0.5px;
+    color:var(--muted); text-decoration:none; text-transform:uppercase;
+    padding:6px 12px; border-radius:3px; background:var(--panel);
+    border:1px solid var(--line); transition:all .2s ease;
+    cursor:pointer;
+  }
+  .tl-clip:hover{color:var(--text); border-color:var(--coral);}
+  .tl-clip.active{color:#FBF7EE; background:var(--coral); border-color:var(--coral);}
+  #playhead{
+    position:fixed; top:0; left:0; width:2px; background:var(--yellow);
+    z-index:101; pointer-events:none; box-shadow:0 0 8px var(--yellow);
+  }
+
+  section{padding:120px 24px 80px; max-width:1080px; margin:0 auto; position:relative;}
+  .eyebrow{
+    font-family:'JetBrains Mono'; font-size:12px; color:var(--coral);
+    letter-spacing:2px; text-transform:uppercase; margin-bottom:16px; display:block;
+  }
+
+  /* ===== HERO ===== */
+  #hero{padding-top:170px; min-height:92vh; display:flex; flex-direction:column; justify-content:center;}
+  .hero-huge{
+    font-family:'Unbounded'; font-weight:900; font-size:clamp(48px, 9vw, 118px);
+    line-height:0.95; letter-spacing:-2px;
+  }
+  .hero-huge .out{color:var(--muted); -webkit-text-stroke:1px var(--muted); color:transparent;}
+  .hero-sub{
+    max-width:560px; font-size:18px; color:var(--muted); margin-top:24px; line-height:1.6;
+  }
+  .hero-hud{
+    display:flex; flex-wrap:wrap; gap:0; margin-top:56px; border-top:1px solid var(--line);
+  }
+  .hud-stat{
+    flex:1; min-width:150px; padding:20px 24px 0; border-right:1px solid var(--line);
+  }
+  .hud-stat:last-child{border-right:none;}
+  .hud-num{font-family:'Unbounded'; font-weight:800; font-size:28px; color:var(--teal);}
+  .hud-label{font-family:'JetBrains Mono'; font-size:11px; color:var(--muted); margin-top:6px; letter-spacing:0.5px;}
+
+  /* ===== SECTION HEADS ===== */
+  h2.sec-title{
+    font-family:'Unbounded'; font-weight:800; font-size:clamp(28px,4vw,42px);
+    letter-spacing:-1px; margin-bottom:12px;
+  }
+  .sec-desc{color:var(--muted); max-width:600px; font-size:15px; line-height:1.6; margin-bottom:56px;}
+
+  /* ===== SECTION ROW LABEL ===== */
+  .track-row{
+    display:flex; align-items:center; gap:16px; margin-bottom:24px;
+  }
+  .track-tag{
+    font-family:'JetBrains Mono'; font-size:11px; padding:4px 10px; border-radius:3px;
+    letter-spacing:1px; text-transform:uppercase; white-space:nowrap;
+  }
+  .track-tag.a{background:rgba(255,90,78,0.15); color:var(--coral); border:1px solid rgba(255,90,78,0.4);}
+  .track-tag.b{background:rgba(47,221,196,0.15); color:var(--teal); border:1px solid rgba(47,221,196,0.4);}
+  .track-line{flex:1; height:1px; background:var(--line);}
+
+  .clip-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(230px,1fr));
+    gap:14px; margin-bottom:52px;
+  }
+  .clip-card{
+    background:var(--card); border:1px solid var(--line); border-radius:8px;
+    padding:22px; position:relative; overflow:hidden; transition:transform .25s ease, border-color .25s ease;
+  }
+  .clip-card:hover{transform:translateY(-4px); border-color:var(--coral);}
+  .clip-card::before{
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  }
+  .clip-card.a::before{background:var(--coral);}
+  .clip-card.b::before{background:var(--teal);}
+  .clip-time{font-family:'JetBrains Mono'; font-size:11px; color:var(--muted); margin-bottom:14px;}
+  .clip-name{font-family:'Unbounded'; font-weight:600; font-size:16px; margin-bottom:8px; line-height:1.3;}
+  .clip-desc{font-size:13.5px; color:var(--muted); line-height:1.55;}
+
+  /* ===== VIDEO SHOWCASE CARDS ===== */
+  .video-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr));
+    gap:16px; margin-bottom:24px;
+  }
+  .video-card{
+    background:var(--card); border:1px solid var(--line); border-radius:10px;
+    overflow:hidden; transition:transform .25s ease, border-color .25s ease;
+  }
+  .video-card:hover{transform:translateY(-4px); border-color:var(--coral);}
+  .video-thumb{
+    aspect-ratio:16/9; position:relative; display:flex; align-items:center; justify-content:center;
+    background:
+      repeating-linear-gradient(135deg, rgba(0,0,0,0.035) 0px, rgba(0,0,0,0.035) 2px, transparent 2px, transparent 14px),
+      linear-gradient(135deg, var(--card), var(--panel));
+    border-bottom:1px solid var(--line);
+  }
+  .video-thumb .play-btn{
+    width:46px; height:46px; border-radius:50%; background:rgba(244,242,236,0.1);
+    border:1.5px solid var(--text); display:flex; align-items:center; justify-content:center;
+    transition:background .2s ease, transform .2s ease;
+  }
+  .video-card:hover .play-btn{background:var(--coral); border-color:var(--coral); transform:scale(1.08);}
+  .video-thumb .play-btn::before{
+    content:''; width:0; height:0; margin-left:3px;
+    border-top:9px solid transparent; border-bottom:9px solid transparent;
+    border-left:14px solid var(--text);
+  }
+  .video-thumb .clip-time{
+    position:absolute; bottom:8px; right:10px; margin:0; font-size:10px;
+    background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:3px;
+  }
+  .video-info{padding:16px 18px;}
+  .video-info .clip-name{margin-bottom:4px; font-size:15px;}
+  .video-info .clip-desc{font-size:12.5px;}
+
+  /* ===== NICHE / SKILLS PILLS ===== */
+  .pill-grid{display:flex; flex-wrap:wrap; gap:10px; margin-bottom:24px;}
+  .pill{
+    font-family:'JetBrains Mono'; font-size:13px; padding:12px 18px;
+    border:1px solid var(--line); border-radius:8px; color:var(--text);
+    background:var(--card); display:flex; align-items:center; gap:8px;
+  }
+  .pill .dot{width:6px; height:6px; border-radius:50%; flex-shrink:0;}
+  .pill:nth-child(6n+1) .dot{background:var(--coral);}
+  .pill:nth-child(6n+2) .dot{background:var(--teal);}
+  .pill:nth-child(6n+3) .dot{background:var(--yellow);}
+  .pill:nth-child(6n+4) .dot{background:var(--coral);}
+  .pill:nth-child(6n+5) .dot{background:var(--teal);}
+  .pill:nth-child(6n+6) .dot{background:var(--yellow);}
+
+  /* ===== ITEM GROUP (per-category video reel) ===== */
+  .subnav{
+    display:flex; flex-wrap:wrap; gap:8px; margin-bottom:56px;
+  }
+  .subnav-pill{
+    font-family:'JetBrains Mono'; font-size:11px; letter-spacing:0.5px;
+    color:var(--muted); text-decoration:none; text-transform:uppercase;
+    padding:8px 14px; border-radius:20px; background:var(--panel);
+    border:1px solid var(--line); transition:all .2s ease;
+  }
+  .subnav-pill:hover{color:var(--text); border-color:var(--coral);}
+
+  .item-block{margin-bottom:76px;}
+  .item-block:last-child{margin-bottom:0;}
+  .item-header{max-width:640px; margin:0 auto 28px; text-align:center; scroll-margin-top:120px;}
+  .item-title{
+    font-family:'Unbounded'; font-weight:800; font-size:clamp(24px,3.4vw,34px);
+    text-transform:uppercase; letter-spacing:-0.5px; line-height:1.15; margin-bottom:12px;
+  }
+  .item-title .hi{color:var(--coral);}
+  .item-desc{font-size:14px; color:var(--muted); line-height:1.6;}
+
+  /* ===== MEDIA GRID (mixed video / image / text slots) ===== */
+  .media-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr));
+    gap:14px; align-items:start;
+  }
+  .media-card{
+    border-radius:10px; overflow:hidden; position:relative;
+    background:
+      repeating-linear-gradient(135deg, rgba(0,0,0,0.035) 0px, rgba(0,0,0,0.035) 2px, transparent 2px, transparent 14px),
+      linear-gradient(160deg, var(--card), var(--panel));
+    border:1px solid var(--line);
+    display:flex; flex-direction:column;
+    transition:transform .25s ease, border-color .25s ease;
+  }
+  .media-card:hover{transform:translateY(-4px); border-color:var(--coral);}
+  .media-card.kind-video, .media-card.kind-image{
+    align-items:center; justify-content:center;
+  }
+  .media-card .play-btn{
+    width:38px; height:38px; border-radius:50%; background:rgba(244,242,236,0.1);
+    border:1.5px solid var(--text); display:flex; align-items:center; justify-content:center;
+    transition:background .2s ease, transform .2s ease; flex-shrink:0;
+  }
+  .media-card:hover .play-btn{background:var(--coral); border-color:var(--coral); transform:scale(1.08);}
+  .media-card .play-btn::before{
+    content:''; width:0; height:0; margin-left:2px;
+    border-top:7px solid transparent; border-bottom:7px solid transparent;
+    border-left:11px solid var(--text);
+  }
+  .media-card .img-icon{width:28px; height:28px; color:var(--muted); flex-shrink:0;}
+  .media-card .slot-label{
+    position:absolute; bottom:9px; left:9px; font-family:'JetBrains Mono';
+    font-size:9.5px; color:var(--muted); letter-spacing:0.3px;
+    background:rgba(0,0,0,0.4); padding:2px 6px; border-radius:4px;
+  }
+  .media-card.kind-image-text{align-items:stretch; justify-content:flex-start;}
+  .media-card.kind-image-text .img-area{
+    flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    border-bottom:1px solid var(--line);
+  }
+  .media-card.kind-image-text .text-area{
+    padding:12px 14px; font-family:'JetBrains Mono'; font-size:10.5px;
+    color:var(--muted); line-height:1.55; flex:1;
+  }
+
+  /* ===== REPURPOSE CUSTOM LAYOUT ===== */
+  .repurpose-row{
+    display:grid; grid-template-columns:3.2fr 1fr; gap:14px; margin-bottom:14px;
+  }
+  .repurpose-row .repurpose-wide{aspect-ratio:16/9; width:100%;}
+  .repurpose-row .repurpose-narrow{width:100%; height:100%;}
+  .repurpose-squares{
+    display:grid; grid-template-columns:repeat(5, 1fr); gap:14px;
+  }
+  @media(max-width:640px){
+    .repurpose-row{grid-template-columns:2.2fr 1fr;}
+    .repurpose-squares{grid-template-columns:repeat(3, 1fr);}
+  }
+
+  /* ===== THUMBNAIL CUSTOM LAYOUT ===== */
+  .thumbnail-wrap{width:100%;}
+  .thumbnail-top{display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin-bottom:14px;}
+  .thumbnail-top .media-card{aspect-ratio:1/1;}
+  .thumbnail-bottom{display:grid; grid-template-columns:repeat(2, 1fr); gap:14px;}
+
+  /* ===== TESTIMONIALS ===== */
+  .testimonial-big{
+    width:100%; margin:0 auto; background:var(--card);
+    border:1px solid var(--line); border-radius:14px; overflow:hidden;
+  }
+  .testimonial-visual{
+    aspect-ratio:16/9; position:relative; display:flex; align-items:center; justify-content:center;
+    background:
+      repeating-linear-gradient(135deg, rgba(0,0,0,0.035) 0px, rgba(0,0,0,0.035) 2px, transparent 2px, transparent 14px),
+      linear-gradient(135deg, var(--card), var(--panel));
+    border-bottom:1px solid var(--line);
+  }
+  .testimonial-content{padding:36px;}
+  .testimonial-quote{font-size:17px; color:var(--text); line-height:1.65; margin-bottom:22px;}
+  .testimonial-quote::before{content:'"'; color:var(--coral); font-family:'Unbounded'; font-size:24px;}
+  .testimonial-name{font-family:'Unbounded'; font-size:14px; font-weight:600;}
+  .testimonial-role{font-family:'JetBrains Mono'; font-size:11px; color:var(--muted); margin-top:2px;}
+
+
+  /* ===== TOOLS ===== */
+  .chip-row{display:flex; flex-wrap:wrap; gap:10px;}
+  .chip{
+    font-family:'JetBrains Mono'; font-size:13px; padding:10px 16px;
+    border:1px solid var(--line); border-radius:20px; color:var(--text);
+    background:var(--panel);
+  }
+  .chip:nth-child(3n+1){border-color:rgba(255,90,78,0.4);}
+  .chip:nth-child(3n+2){border-color:rgba(47,221,196,0.4);}
+  .chip:nth-child(3n+3){border-color:rgba(255,201,60,0.4);}
+
+  /* ===== CONTACT / EXPORT PANEL ===== */
+  #contact{padding-bottom:140px;}
+  .export-panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:40px; display:grid; gap:24px;
+  }
+  .export-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding-bottom:20px; border-bottom:1px solid var(--line); flex-wrap:wrap; gap:8px;
+  }
+  .export-row:last-of-type{border-bottom:none; padding-bottom:0;}
+  .export-key{font-family:'JetBrains Mono'; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:1px;}
+  .export-val{font-family:'Unbounded'; font-size:15px; font-weight:600;}
+  .export-val a{color:var(--text); text-decoration:none; border-bottom:1px solid var(--coral);}
+  .export-val a:hover{color:var(--coral);}
+  .render-btn{
+    font-family:'Unbounded'; font-weight:600; font-size:14px; letter-spacing:0.5px;
+    background:var(--coral); color:#FBF7EE; border:none; padding:16px 28px;
+    border-radius:6px; cursor:pointer; text-decoration:none; display:inline-flex;
+    align-items:center; gap:10px; justify-self:start; transition:background .2s ease;
+  }
+  .render-btn:hover{background:var(--yellow);}
+  .render-btn::after{content:'→';}
+
+  footer{
+    text-align:center; padding:32px 24px; color:var(--muted);
+    font-family:'JetBrains Mono'; font-size:11px; border-top:1px solid var(--line);
+  }
+
+  @media(max-width:640px){
+    .tl-track{overflow-x:auto; scrollbar-width:none;}
+    .tl-track::-webkit-scrollbar{display:none;}
+    section{padding:100px 18px 60px;}
+    .export-row{flex-direction:column; align-items:flex-start;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<div id="playhead"></div>
+
+<nav id="timeline-nav">
+  <div class="tl-top">
+    <div class="tl-brand">MU<span>WON</span></div>
+    <div class="tl-code mono" id="clock">00:00:00:00</div>
+  </div>
+  <div class="tl-track">
+    <div class="tl-ruler"></div>
+    <a class="tl-clip" data-target="hero">Intro</a>
+    <a class="tl-clip" data-target="edits">Edits</a>
+    <a class="tl-clip" data-target="niche">Niche</a>
+    <a class="tl-clip" data-target="skills">Skills</a>
+    <a class="tl-clip" data-target="testimonials">Stories</a>
+    <a class="tl-clip" data-target="contact">Contact</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <span class="eyebrow mono">// video editor — content creator — based in the Philippines</span>
+  <h1 class="hero-huge">MUWON<br><span class="out">MAKES IT</span><br>MOVE.</h1>
+  <p class="hero-sub">I cut, script, and animate short-form video for brands that need attention fast — plus I run my own content library that's pulled in millions of organic views. Two tracks, one timeline.</p>
+
+  <div class="hero-hud">
+    <div class="hud-stat">
+      <div class="hud-num">90K+</div>
+      <div class="hud-label">FACEBOOK FOLLOWERS</div>
+    </div>
+    <div class="hud-stat">
+      <div class="hud-num">2.1M</div>
+      <div class="hud-label">PEAK VIDEO VIEWS</div>
+    </div>
+    <div class="hud-stat">
+      <div class="hud-num">3</div>
+      <div class="hud-label">PLATFORMS — TIKTOK / FB / YT</div>
+    </div>
+    <div class="hud-stat">
+      <div class="hud-num">10+</div>
+      <div class="hud-label">CLIENT CAMPAIGNS SHIPPED</div>
+    </div>
+  </div>
+</section>
+
+<!-- EDITS -->
+<section id="edits">
+  <span class="eyebrow mono">01 — selected edits</span>
+  <h2 class="sec-title">Press play on the work.</h2>
+  <p class="sec-desc">Every category below gets its own reel. Swap the placeholders for real video links or embeds.</p>
+  <div class="subnav" id="edits-subnav"></div>
+  <div id="edits-items"></div>
+</section>
+
+<!-- NICHE -->
+<section id="niche">
+  <span class="eyebrow mono">02 — niche</span>
+  <h2 class="sec-title">Styles I cut in.</h2>
+  <p class="sec-desc">Samples grouped by content type — the formats I'm most fluent in.</p>
+  <div class="subnav" id="niche-subnav"></div>
+  <div id="niche-items"></div>
+</section>
+
+<!-- SKILLS -->
+<section id="skills">
+  <span class="eyebrow mono">03 — skills</span>
+  <h2 class="sec-title">What I bring to the timeline.</h2>
+  <p class="sec-desc">Core editing and production skills, shown through the work itself.</p>
+  <div class="chip-row" style="margin-bottom:48px;">
+    <span class="chip">DaVinci Resolve</span>
+    <span class="chip">CapCut</span>
+    <span class="chip">ElevenLabs</span>
+    <span class="chip">Claude</span>
+    <span class="chip">ChatGPT</span>
+    <span class="chip">Gemini</span>
+    <span class="chip">Google Omni</span>
+    <span class="chip">VEO</span>
+    <span class="chip">RunwayML</span>
+    <span class="chip">WAN AI</span>
+    <span class="chip">Higgsfield</span>
+  </div>
+  <div class="subnav" id="skills-subnav"></div>
+  <div id="skills-items"></div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section id="testimonials">
+  <span class="eyebrow mono">04 — success & stories</span>
+  <h2 class="sec-title">What clients say.</h2>
+  <p class="sec-desc">Swap this in with a real testimonial — video or written — as they come in.</p>
+  <div class="testimonial-big">
+    <div class="testimonial-visual"><div class="play-btn"></div><span class="slot-label mono">Testimonial 01</span></div>
+    <div class="testimonial-content">
+      <div class="testimonial-quote">Add your strongest client quote or testimonial video here — the one story that best proves the results you deliver.</div>
+      <div class="testimonial-name">Client Name</div>
+      <div class="testimonial-role">Role / Company</div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <span class="eyebrow mono">04 — export</span>
+  <h2 class="sec-title">Let's cut something together.</h2>
+  <p class="sec-desc">Editing, content strategy, or a campaign that needs a character people remember — tell me the brief.</p>
+
+  <div class="export-panel">
+    <div class="export-row">
+      <span class="export-key mono">Email</span>
+      <span class="export-val"><a href="mailto:mvhin30@gmail.com">mvhin30@gmail.com</a></span>
+    </div>
+    <div class="export-row">
+      <span class="export-key mono">Number</span>
+      <span class="export-val"><a href="tel:+639512967395">+63 951 296 7395</a></span>
+    </div>
+    <div class="export-row">
+      <span class="export-key mono">Facebook</span>
+      <span class="export-val"><a href="https://www.facebook.com/sermuwon" target="_blank" rel="noopener">/sermuwon</a></span>
+    </div>
+    <div class="export-row">
+      <span class="export-key mono">TikTok</span>
+      <span class="export-val"><a href="https://www.tiktok.com/@sermuwon" target="_blank" rel="noopener">@sermuwon</a></span>
+    </div>
+    <div class="export-row">
+      <span class="export-key mono">Based in</span>
+      <span class="export-val">Philippines</span>
+    </div>
+  </div>
+
+  <div style="margin-top:32px;">
+    <a class="render-btn" href="mailto:mvhin30@gmail.com">Start a project</a>
+  </div>
+</section>
+
+<footer>
+  MUWON — VIDEO EDITOR / CONTENT CREATOR — <span id="year-mono"></span>
+</footer>
+
+<script>
+  // ===== PORTFOLIO DATA =====
+  // Edit this array to change titles, descriptions, or slot counts/types per item.
+  // Each item has a "mix" — groups of slots with a kind (video / image / image-text), an aspect ratio, and a count.
+  // Later, replace a slot's icon with a real <video>/<img> by editing renderMediaGrid().
+  const PORTFOLIO_DATA = {
+    edits: [
+      {id:'best-edit', title:'One of My Best Edits', desc:'The single strongest edit in my library — the one I lead with.',
+        mix:[{kind:'video', ratio:'16/9', count:1, videos:['https://youtu.be/8tSoNL6EF_o']}]},
+      {id:'short-form', title:'My Best Short-Form Edits', desc:'High-performing short-form work built on strategic hooks and audience-focused storytelling.',
+        cols:4, mix:[{kind:'video', ratio:'9/16', count:8}]},
+      {id:'ai-video', title:'My AI Video Creation & Automation', desc:'AI-generated shots and automated production pipelines.',
+        cols:5, mix:[{kind:'video', ratio:'9/16', count:10}]},
+      {id:'compilation', title:'Some of My Best Short-Form Edits', desc:'A full showreel spanning formats, clients, and styles.',
+        cols:5, mix:[{kind:'video', ratio:'9/16', count:10}]},
+    ],
+    niche: [
+      {id:'ugc', title:'UGC Style', desc:'Authentic, creator-style content built to feel native to the feed.',
+        mix:[{kind:'video', ratio:'9/16', count:3}]},
+      {id:'vsl', title:'VSL Style', desc:'Video sales letters structured to move a viewer toward a decision.',
+        mix:[{kind:'video', ratio:'9/16', count:3}]},
+      {id:'storytelling', title:'Story Telling', desc:'Narrative-driven edits that build tension and payoff.',
+        mix:[{kind:'video', ratio:'9/16', count:3}]},
+      {id:'comedy', title:'Comedy / Funny', desc:'Timing-driven cuts built around the joke, not just the footage.',
+        mix:[{kind:'video', ratio:'9/16', count:3}]},
+      {id:'realestate', title:'House Tour / Real Estate', desc:'Walkthrough-style edits that sell the space.',
+        mix:[{kind:'video', ratio:'9/16', count:3}]},
+      {id:'language', title:'Different Language', desc:'Content adapted and cut for non-English-speaking audiences.',
+        mix:[{kind:'video', ratio:'9/16', count:3}]},
+    ],
+    skills: [
+      {id:'ytlongform', title:'YouTube Long Form', desc:'Full-length YouTube edits, plus the cover art that gets the click.',
+        cols:4, mix:[
+          {kind:'video', ratio:'16/9', count:6, tag:'Video'},
+          {kind:'image', ratio:'16/9', count:2, tag:'YT Cover'}
+        ]},
+      {id:'repurpose', title:'Repurposing Content', desc:'One long-form source, cut down across every format it can live on.',
+        custom:'repurpose'},
+      {id:'colorgrade', title:'Color Grading', desc:'Mood and consistency built through grading, not just cutting.',
+        mix:[{kind:'image', ratio:'16/9', count:4, tag:'YT Thumbnail'}]},
+      {id:'anime', title:'Anime Edits', desc:'Anime-style edits — pacing, sound design, and motion built for fans of the format.',
+        mix:[{kind:'video', ratio:'1/1', count:5, tag:'Video'}]},
+      {id:'thumbnail', title:'Creative Thumbnail', desc:'Thumbnail design built to earn the click.',
+        custom:'thumbnail'},
+      {id:'prompting', title:'AI Prompting', desc:'Prompt libraries for consistent, high-quality AI image and video generation.',
+        mix:[{kind:'image-text', ratio:'4/3', count:4, tag:'Prompt'}]},
+      {id:'capcuttemplate', title:'CapCut Template', desc:'Reusable CapCut templates that speed up production.',
+        mix:[{kind:'video', ratio:'9/16', count:4, tag:'Template'}]},
+    ]
+  };
+
+  const IMG_ICON = '<svg class="img-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+
+  function getYouTubeId(url){
+    if(!url) return null;
+    const m = url.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);
+    return m ? m[1] : null;
+  }
+
+  function renderMediaGrid(mix, cols){
+    const cards = [];
+    mix.forEach(group => {
+      const tag = group.tag || (group.kind === 'video' ? 'Video' : group.kind === 'image' ? 'Image' : 'Prompt');
+      for(let i = 1; i <= group.count; i++){
+        const num = String(i).padStart(2,'0');
+        const videoUrl = group.videos && group.videos[i-1];
+        const ytId = group.kind === 'video' ? getYouTubeId(videoUrl) : null;
+
+        if(ytId){
+          cards.push(`
+            <div class="media-card kind-video" style="aspect-ratio:${group.ratio}; padding:0;">
+              <iframe
+                src="https://www.youtube-nocookie.com/embed/${ytId}"
+                title="${tag} ${num}"
+                style="width:100%; height:100%; border:0; display:block;"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+                loading="lazy"
+              ></iframe>
+            </div>`);
+        } else if(group.kind === 'image-text'){
+          cards.push(`
+            <div class="media-card kind-image-text">
+              <div class="img-area" style="aspect-ratio:${group.ratio}">${IMG_ICON}</div>
+              <div class="text-area">${tag} ${num} — paste your prompt text here</div>
+            </div>`);
+        } else {
+          const icon = group.kind === 'video' ? '<div class="play-btn"></div>' : IMG_ICON;
+          cards.push(`
+            <div class="media-card kind-${group.kind}" style="aspect-ratio:${group.ratio}">
+              ${icon}
+              <span class="slot-label mono">${tag} ${num}</span>
+            </div>`);
+        }
+      }
+    });
+    const colStyle = cols ? ` style="grid-template-columns:repeat(${cols}, 1fr);"` : '';
+    return `<div class="media-grid"${colStyle}>${cards.join('')}</div>`;
+  }
+
+  function renderRepurpose(){
+    return `
+      <div class="repurpose-row">
+        <div class="media-card kind-video repurpose-wide" style="aspect-ratio:16/9;">
+          <div class="play-btn"></div>
+          <span class="slot-label mono">Long Form 01</span>
+        </div>
+        <div class="media-card kind-video repurpose-narrow" style="aspect-ratio:9/16;">
+          <div class="play-btn"></div>
+          <span class="slot-label mono">Short Form 01</span>
+        </div>
+      </div>
+      <div class="repurpose-squares">
+        ${[1,2,3,4,5].map(i => `
+          <div class="media-card kind-image" style="aspect-ratio:1/1;">
+            ${IMG_ICON}
+            <span class="slot-label mono">IG Carousel ${String(i).padStart(2,'0')}</span>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  function renderThumbnail(){
+    return `
+      <div class="thumbnail-wrap">
+        <div class="thumbnail-top">
+          ${[1,2,3].map(i => `
+            <div class="media-card kind-image" style="aspect-ratio:1/1;">
+              ${IMG_ICON}
+              <span class="slot-label mono">IG Thumbnail ${String(i).padStart(2,'0')}</span>
+            </div>`).join('')}
+        </div>
+        <div class="thumbnail-bottom">
+          ${[1,2].map(i => `
+            <div class="media-card kind-image" style="aspect-ratio:16/9;">
+              ${IMG_ICON}
+              <span class="slot-label mono">YT Thumbnail ${String(i).padStart(2,'0')}</span>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  function renderGroup(groupKey){
+    const items = PORTFOLIO_DATA[groupKey];
+    const subnavEl = document.getElementById(groupKey + '-subnav');
+    const itemsEl = document.getElementById(groupKey + '-items');
+
+    subnavEl.innerHTML = items.map(it =>
+      `<a class="subnav-pill" data-anchor="${it.id}">${it.title}</a>`
+    ).join('');
+
+    itemsEl.innerHTML = items.map(it => {
+      let body;
+      if(it.custom === 'repurpose'){
+        body = renderRepurpose();
+      } else if(it.custom === 'thumbnail'){
+        body = renderThumbnail();
+      } else {
+        body = renderMediaGrid(it.mix, it.cols);
+      }
+      return `
+      <div class="item-block" id="${it.id}">
+        <div class="item-header">
+          <div class="item-title">${it.title}</div>
+          <div class="item-desc">${it.desc}</div>
+        </div>
+        ${body}
+      </div>
+    `;
+    }).join('');
+
+    subnavEl.querySelectorAll('.subnav-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        document.getElementById(pill.dataset.anchor).scrollIntoView({behavior:'smooth', block:'start'});
+      });
+    });
+  }
+
+  renderGroup('edits');
+  renderGroup('niche');
+  renderGroup('skills');
+</script>
+
+<script>
+  // Playhead + timecode driven by scroll position
+  const playhead = document.getElementById('playhead');
+  const clock = document.getElementById('clock');
+  const sections = ['hero','edits','niche','skills','testimonials','contact'];
+  const clips = document.querySelectorAll('.tl-clip');
+
+  function toTimecode(progress){
+    const totalFrames = Math.floor(progress * 24 * 60 * 3); // fake 3-min "runtime" at 24fps
+    const frames = totalFrames % 24;
+    const totalSeconds = Math.floor(totalFrames / 24);
+    const seconds = totalSeconds % 60;
+    const minutes = Math.floor(totalSeconds / 60);
+    const pad = n => String(n).padStart(2,'0');
+    return `00:${pad(minutes)}:${pad(seconds)}:${pad(frames)}`;
+  }
+
+  function updateScroll(){
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = docHeight > 0 ? scrollTop / docHeight : 0;
+    playhead.style.height = window.innerHeight + 'px';
+    playhead.style.left = (progress * window.innerWidth) + 'px';
+    clock.textContent = toTimecode(progress);
+
+    let current = 'hero';
+    for(const id of sections){
+      const el = document.getElementById(id);
+      if(el && el.getBoundingClientRect().top < window.innerHeight * 0.4){
+        current = id;
+      }
+    }
+    clips.forEach(c => c.classList.toggle('active', c.dataset.target === current));
+  }
+
+  clips.forEach(clip => {
+    clip.addEventListener('click', () => {
+      document.getElementById(clip.dataset.target).scrollIntoView({behavior:'smooth'});
+    });
+  });
+
+  window.addEventListener('scroll', updateScroll);
+  window.addEventListener('resize', updateScroll);
+  updateScroll();
+
+  document.getElementById('year-mono').textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>
